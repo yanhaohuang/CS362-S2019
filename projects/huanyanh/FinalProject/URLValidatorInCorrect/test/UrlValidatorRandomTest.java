@@ -1,51 +1,84 @@
 import junit.framework.TestCase;
+import java.util.concurrent.ThreadLocalRandom;
 
-//** TODO Modify function below to random tests 
 public class UrlValidatorRandomTest extends TestCase {
 
-   public void testValidator() {
+	public void testRandomValidator() {
 		UrlValidator validator = new UrlValidator();
-		String[] valid = new String[15];
-		String[] invalid = new String[15];
 
-		valid[0] = "http://www.google.com";
-		valid[1] = "http://255.com:80";
-		valid[2] = "http://go.com";
-		valid[3] = "http://go.au/$23";
-		valid[4] = "http://0.0.0.0:65535/test1";
-		valid[5] = "http://www.cnn.com/WORLD/?hpt=sitenav";
-		valid[6] = "http://www.cnn.com./WORLD/?hpt=sitenav";
-		valid[7] = "http://example.rocks:/";
-		valid[8] = "http://hello.tokyo/";
-		valid[9] = "http://www.example.org/a/b/hello..world";
-		valid[10] = "http://www.example.org/a/hello..world";
-		valid[11] = "http://www.apache.org:80/path";
-		valid[12] = "http://user:pass@www.apache.org:80/path";
-		valid[13] = "http://us%00er:-._~!$&'()*+,;=@www.apache.org:80/path";
-		valid[14] = "http://example.com/serach?address=Main%20Avenue";
+		// Result pair URL parts adapted from UrlValidatorTest
+		ResultPair[] testUrlSchemes = { new ResultPair("http://", true), new ResultPair("ftp://", true),
+				new ResultPair("h3t://", true), new ResultPair("3ht://", false), new ResultPair("http:/", false),
+				new ResultPair("http:", false), new ResultPair("http/", false), new ResultPair("://", false) };
 
-		invalid[0] = "http/www.google.com";
-		invalid[1] = "http://go.com/test1//file";
-		invalid[2] = "ftp://255.com:65636";
-		invalid[3] = "://go.au/t123/file";
-		invalid[4] = "http://1.2.3.4.5";
-		invalid[5] = "http://www.cnn.com../";
-		invalid[6] = "http://www.cnn.invalid/";
-		invalid[7] = "http://example.rocks:65536/";
-		invalid[8] = "http://example.rocks:100000/";
-		invalid[9] = "http://www.example.org/../world";
-		invalid[10] = "http://:pass@www.apache.org:80/path";
-		invalid[11] = "http://:@www.apache.org:80/path";
-		invalid[12] = "http://:@www.apache.org:80/path";
-		invalid[13] = "http://user:pa:ss@www.apache.org/path";
-		invalid[14] = "http://example.com/serach?address=Main Avenue";
+		ResultPair[] testUrlAuthorities = { new ResultPair("www.google.com", true),
+				new ResultPair("www.google.com.", true), new ResultPair("go.com", true), new ResultPair("go.au", true),
+				new ResultPair("0.0.0.0", true), new ResultPair("255.255.255.255", true),
+				new ResultPair("256.256.256.256", false), new ResultPair("255.com", true),
+				new ResultPair("1.2.3.4.5", false), new ResultPair("1.2.3.4.", false), new ResultPair("1.2.3", false),
+				new ResultPair(".1.2.3.4", false), new ResultPair("go.a", false), new ResultPair("go.a1a", false),
+				new ResultPair("go.cc", true), new ResultPair("go.1aa", false), new ResultPair("aaa.", false),
+				new ResultPair(".aaa", false), new ResultPair("aaa", false), new ResultPair("", false) };
 
-		for (int i = 0; i < 15; i++) {
-			assertTrue(validator.isValid(valid[i]));
+		ResultPair[] testUrlPorts = { new ResultPair(":80", true), new ResultPair(":65535", true), // max possible
+				new ResultPair(":65536", false), // max possible +1
+				new ResultPair(":0", true), new ResultPair("", true), new ResultPair(":-1", false),
+				new ResultPair(":65636", false), new ResultPair(":999999999999999999", false),
+				new ResultPair(":65a", false) };
+		ResultPair[] testUrlPaths = { new ResultPair("/test1", true), new ResultPair("/t123", true),
+				new ResultPair("/$23", true), new ResultPair("/..", false), new ResultPair("/../", false),
+				new ResultPair("/test1/", true), new ResultPair("", true), new ResultPair("/test1/file", true),
+				new ResultPair("/..//file", false), new ResultPair("/test1//file", false) };
+
+		ResultPair[] testUrlPathOptions = { new ResultPair("/test1", true), new ResultPair("/t123", true),
+				new ResultPair("/$23", true), new ResultPair("/..", false), new ResultPair("/../", false),
+				new ResultPair("/test1/", true), new ResultPair("/#", false), new ResultPair("", true),
+				new ResultPair("/test1/file", true), new ResultPair("/t123/file", true),
+				new ResultPair("/$23/file", true), new ResultPair("/../file", false),
+				new ResultPair("/..//file", false), new ResultPair("/test1//file", true),
+				new ResultPair("/#/file", false) };
+
+		ResultPair[] testUrlQueries = { new ResultPair("?action=view", true),
+				new ResultPair("?action=edit&mode=up", true), new ResultPair("", true) };
+
+		// Select a random URL portion for each to construct a URL, and check expected
+		// validity for each portion to get expected validity of that URL
+		for (int i = 0; i < 2000; i++) {
+			boolean expectedIsValid = true;
+
+			int randScheme = ThreadLocalRandom.current().nextInt(0, testUrlSchemes.length);
+			String constructedUrl = testUrlSchemes[randScheme].item;
+			expectedIsValid = testUrlSchemes[randScheme].valid && expectedIsValid;
+
+			int randAuthority = ThreadLocalRandom.current().nextInt(0, testUrlAuthorities.length);
+			constructedUrl += testUrlAuthorities[randAuthority].item;
+			expectedIsValid = testUrlAuthorities[randAuthority].valid && expectedIsValid;
+
+			int randPort = ThreadLocalRandom.current().nextInt(0, testUrlPorts.length);
+			constructedUrl += testUrlPorts[randPort].item;
+			expectedIsValid = testUrlPorts[randPort].valid && expectedIsValid;
+
+			int randPath = ThreadLocalRandom.current().nextInt(0, testUrlPaths.length);
+			constructedUrl += testUrlPaths[randPath].item;
+			expectedIsValid = testUrlPaths[randPath].valid && expectedIsValid;
+
+			int randPathOption = ThreadLocalRandom.current().nextInt(0, testUrlPathOptions.length);
+			constructedUrl += testUrlPathOptions[randPathOption].item;
+			expectedIsValid = testUrlPathOptions[randPathOption].valid && expectedIsValid;
+
+			int randQuery = ThreadLocalRandom.current().nextInt(0, testUrlQueries.length);
+			constructedUrl += testUrlQueries[randQuery].item;
+			expectedIsValid = testUrlQueries[randQuery].valid && expectedIsValid;
+
+			if (expectedIsValid) {
+				System.out.println("Expect is valid");
+				System.out.println(constructedUrl);
+				assertTrue(validator.isValid(constructedUrl));
+			} else {
+				System.out.println("Expect is NOT valid");
+				System.out.println(constructedUrl);
+				assertFalse(validator.isValid(constructedUrl));
+			}
 		}
-
-		for (int i = 0; i < 15; i++) {
-			assertFalse(validator.isValid(invalid[i]));
-		}
-   }
+	}
 }
