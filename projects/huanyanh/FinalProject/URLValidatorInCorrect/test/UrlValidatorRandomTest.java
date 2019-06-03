@@ -4,7 +4,9 @@ import java.util.concurrent.ThreadLocalRandom;
 public class UrlValidatorRandomTest extends TestCase {
 
 	public void testRandomValidator() {
-		UrlValidator validator = new UrlValidator();
+		long options = UrlValidator.ALLOW_2_SLASHES + UrlValidator.ALLOW_ALL_SCHEMES + UrlValidator.NO_FRAGMENTS;
+
+		UrlValidator validator = new UrlValidator(null, null, options);
 
 		// Result pair URL parts adapted from UrlValidatorTest
 		ResultPair[] testUrlSchemes = { new ResultPair("http://", true), new ResultPair("ftp://", true),
@@ -25,17 +27,16 @@ public class UrlValidatorRandomTest extends TestCase {
 				new ResultPair(":0", true), new ResultPair("", true), new ResultPair(":-1", false),
 				new ResultPair(":65636", false), new ResultPair(":999999999999999999", false),
 				new ResultPair(":65a", false) };
+
 		ResultPair[] testUrlPaths = { new ResultPair("/test1", true), new ResultPair("/t123", true),
 				new ResultPair("/$23", true), new ResultPair("/..", false), new ResultPair("/../", false),
 				new ResultPair("/test1/", true), new ResultPair("", true), new ResultPair("/test1/file", true),
-				new ResultPair("/..//file", false), new ResultPair("/test1//file", false) };
+				new ResultPair("/..//file", false), new ResultPair("/test1//file", true) };
 
 		ResultPair[] testUrlPathOptions = { new ResultPair("/test1", true), new ResultPair("/t123", true),
-				new ResultPair("/$23", true), new ResultPair("/..", false), new ResultPair("/../", false),
-				new ResultPair("/test1/", true), new ResultPair("/#", false), new ResultPair("", true),
-				new ResultPair("/test1/file", true), new ResultPair("/t123/file", true),
-				new ResultPair("/$23/file", true), new ResultPair("/../file", false),
-				new ResultPair("/..//file", false), new ResultPair("/test1//file", true),
+				new ResultPair("/$23", true), new ResultPair("/test1/", true), new ResultPair("/#", false),
+				new ResultPair("", true), new ResultPair("/test1/file", true), new ResultPair("/t123/file", true),
+				new ResultPair("/$23/file", true), new ResultPair("/test1//file", true),
 				new ResultPair("/#/file", false) };
 
 		ResultPair[] testUrlQueries = { new ResultPair("?action=view", true),
@@ -43,7 +44,7 @@ public class UrlValidatorRandomTest extends TestCase {
 
 		// Select a random URL portion for each to construct a URL, and check expected
 		// validity for each portion to get expected validity of that URL
-		for (int i = 0; i < 2000; i++) {
+		for (int i = 0; i < 25000; i++) {
 			boolean expectedIsValid = true;
 
 			int randScheme = ThreadLocalRandom.current().nextInt(0, testUrlSchemes.length);
@@ -69,14 +70,24 @@ public class UrlValidatorRandomTest extends TestCase {
 			int randQuery = ThreadLocalRandom.current().nextInt(0, testUrlQueries.length);
 			constructedUrl += testUrlQueries[randQuery].item;
 			expectedIsValid = testUrlQueries[randQuery].valid && expectedIsValid;
+			int iterationCounter = i + 1;
+			System.out.println("Iteration " + iterationCounter);
 
 			if (expectedIsValid) {
 				System.out.println("Expect is valid");
 				System.out.println(constructedUrl);
+				if (!validator.isValid(constructedUrl)) {
+					boolean test = validator.isValid(constructedUrl);
+					System.out.println(test);
+				}
 				assertTrue(validator.isValid(constructedUrl));
 			} else {
 				System.out.println("Expect is NOT valid");
 				System.out.println(constructedUrl);
+				if (validator.isValid(constructedUrl)) {
+					boolean test = validator.isValid(constructedUrl);
+					System.out.println(test);
+				}
 				assertFalse(validator.isValid(constructedUrl));
 			}
 		}
